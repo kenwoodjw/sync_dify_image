@@ -1,9 +1,0 @@
-langgenius/dify-api:0.8.2
-langgenius/dify-web:0.8.2
-postgres:15-alpine
-redis:6-alpine
-langgenius/dify-sandbox:0.2.7
-ubuntu/squid:latest
-certbot/certbot
-nginx:latest
-semitechnologies/weaviate:1.19.0
