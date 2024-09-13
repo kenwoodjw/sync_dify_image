@@ -30,9 +30,10 @@ jobs:
         for image in ${{ steps.read_image_list.outputs.images }}; do
           # Pull the image from DockerHub
           docker pull $image
+          image_tag=$(echo $image | awk -F'/' '{print $NF}')
           
           # Tag the image for ACR
-          acr_image="${{ secrets.ACR_REGISTRY }}/kenwood-ai/$image"
+          acr_image="${{ secrets.ACR_REGISTRY }}/kenwood-ai/$image_tag"
           docker tag $image $acr_image
           
           # Push the image to ACR
