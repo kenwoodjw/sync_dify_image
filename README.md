@@ -31,17 +31,16 @@ GitHub Actions 工作流定义文件位于 `.github/workflows/sync-images.yml`�
 源镜像:                           替换后镜像:
 -------------------------------- -------------------------------
 langgenius/dify-api:0.8.2          registry.cn-hangzhou.aliyuncs.com/kenwood-ai/dify-api:0.8.2
-langgenius/dify-api:0.8.2          registry.cn-hangzhou.aliyuncs.com/kenwood-ai/dify-api:0.8.2
 langgenius/dify-web:0.8.2          registry.cn-hangzhou.aliyuncs.com/kenwood-ai/dify-web:0.8.2
 postgres:15-alpine                 registry.cn-hangzhou.aliyuncs.com/kenwood-ai/postgres:15-alpine
 redis:6-alpine                     registry.cn-hangzhou.aliyuncs.com/kenwood-ai/redis:6-alpine
 langgenius/dify-sandbox:0.2.7      registry.cn-hangzhou.aliyuncs.com/kenwood-ai/dify-sandbox:0.2.7
-ubuntu/squid:latest                registry.cn-hangzhou.aliyuncs.com/kenwood-ai/ubuntu/squid:latest
-certbot/certbot                     registry.cn-hangzhou.aliyuncs.com/kenwood-ai/certbot/certbot:latest
+ubuntu/squid:latest                registry.cn-hangzhou.aliyuncs.com/kenwood-ai/squid:latest
+certbot/certbot                     registry.cn-hangzhou.aliyuncs.com/kenwood-ai/certbot:latest
 nginx:latest                       registry.cn-hangzhou.aliyuncs.com/kenwood-ai/nginx:latest
-semitechnologies/weaviate:1.19.0   registry.cn-hangzhou.aliyuncs.com/kenwood-ai/semiteschnologies/weaviate:1.19.0
+semitechnologies/weaviate:1.19.0   registry.cn-hangzhou.aliyuncs.com/kenwood-ai/weaviate:1.19.0
 langgenius/qdrant:v1.7.3           registry.cn-hangzhou.aliyuncs.com/kenwood-ai/qdrant:v1.7.3
-pgvector/pgvector:pg16             registry.cn-hangzhou.aliyuncs.com/kenwood-ai/pgvector/pgvector:pg16
-tensorchord/pgvecto-rs:pg16-v0.3.0 registry.cn-hangzhou.aliyuncs.com/kenwood-ai/tensorchord/pgvecto-rs:pg16-v0.3.0
-ghcr.io/chroma-core/chroma:0.5.1   registry.cn-hangzhou.aliyuncs.com/kenwood-ai/ghcr.io/chroma-core/chroma:0.5.1
+pgvector/pgvector:pg16             registry.cn-hangzhou.aliyuncs.com/kenwood-ai//pgvector:pg16
+tensorchord/pgvecto-rs:pg16-v0.3.0 registry.cn-hangzhou.aliyuncs.com/kenwood-ai/pgvecto-rs:pg16-v0.3.0
+ghcr.io/chroma-core/chroma:0.5.1   registry.cn-hangzhou.aliyuncs.com/kenwood-ai/chroma:0.5.1
 ```
