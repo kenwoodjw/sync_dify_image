@@ -32,7 +32,7 @@ jobs:
           docker pull $image
           
           # Tag the image for ACR
-          acr_image="${{ secrets.ACR_REGISTRY }}/$image"
+          acr_image="${{ secrets.ACR_REGISTRY }}/kenwood-ai/$image"
           docker tag $image $acr_image
           
           # Push the image to ACR
