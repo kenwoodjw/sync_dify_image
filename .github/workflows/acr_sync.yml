@@ -1,4 +1,4 @@
-name: Sync Docker Images to Alibaba Cloud
+name: Sync Docker Images to Alibaba Cloud from Docker Compose
 
 on:
   push:
@@ -10,25 +10,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
+    - name: Checkout code from Dify repo
       uses: actions/checkout@v3
+      with:
+        repository: langgenius/dify  # 拉取 langgenius/dify 仓库
+        path: dify-repo  # 将该 repo 克隆到 dify-repo 目录中
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+    - name: Install yq
+      run: |
+        sudo wget https://github.com/mikefarah/yq/releases/download/v4.27.3/yq_linux_amd64 -O /usr/bin/yq
+        sudo chmod +x /usr/bin/yq
+
+    - name: Parse docker-compose.yaml for images
+      id: parse_docker_compose
+      run: |
+        images=$(yq e '.services[].image' dify-repo/docker/docker-compose.yaml | tr '\n' ' ')
+        echo "Images: $images"
+        echo "::set-output name=images::$images"
 
     - name: Log in to Alibaba Cloud ACR
       run: echo "${{ secrets.ACR_PASSWORD }}" | docker login ${{ secrets.ACR_REGISTRY }} --username ${{ secrets.ACR_USERNAME }} --password-stdin
 
-    - name: Read image list from txt file
-      id: read_image_list
-      run: |
-        images=$(cat ./images.txt | tr '\n' ' ')
-        echo "Images: $images"
-        echo "::set-output name=images::$images"
-
     - name: Pull and push images to Alibaba Cloud ACR
       run: |
-        images="${{ steps.read_image_list.outputs.images }}"
+        images="${{ steps.parse_docker_compose.outputs.images }}"
         for image in $images; do
           echo "Processing image: $image"
           
