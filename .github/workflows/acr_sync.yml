@@ -22,20 +22,28 @@ jobs:
     - name: Read image list from txt file
       id: read_image_list
       run: |
-        images=$(cat ./images.txt)
+        images=$(cat ./images.txt | tr '\n' ' ')
+        echo "Images: $images"
         echo "::set-output name=images::$images"
 
     - name: Pull and push images to Alibaba Cloud ACR
       run: |
-        for image in ${{ steps.read_image_list.outputs.images }}; do
+        images="${{ steps.read_image_list.outputs.images }}"
+        for image in $images; do
+          echo "Processing image: $image"
+          
           # Pull the image from DockerHub
           docker pull $image
+          
+          # Extract image tag (last part)
           image_tag=$(echo $image | awk -F'/' '{print $NF}')
           
           # Tag the image for ACR
           acr_image="${{ secrets.ACR_REGISTRY }}/kenwood-ai/$image_tag"
+          echo "Tagging image: $acr_image"
           docker tag $image $acr_image
           
           # Push the image to ACR
+          echo "Pushing image to ACR: $acr_image"
           docker push $acr_image
         done
