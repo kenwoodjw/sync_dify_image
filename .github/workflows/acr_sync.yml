@@ -47,8 +47,11 @@ jobs:
           acr_image="${{ secrets.ACR_REGISTRY }}/kenwood-ai/$image_tag"
           echo "Tagging image: $acr_image"
           docker tag $image $acr_image
+
+          docker rmi $image
           
           # Push the image to ACR
           echo "Pushing image to ACR: $acr_image"
           docker push $acr_image
+          docker rmi $acr_image
         done
