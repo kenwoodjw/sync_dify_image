@@ -1,4 +1,4 @@
-name: Sync Docker Images to Alibaba Cloud from Docker Compose
+name: Sync Docker Images to Alibaba Cloud from Docker Compose and Clean Old Images
 
 on:
   schedule:
@@ -39,10 +39,10 @@ jobs:
 
         if [ "$last_tag" != "${{ steps.get_latest_release.outputs.tag_name }}" ]; then
           echo "New release detected."
-          echo "##[set-output name=new_release;]true"
+          echo "new_release=true" >> $GITHUB_OUTPUT
         else
           echo "No new release."
-          echo "##[set-output name=new_release;]false"
+          echo "new_release=false" >> $GITHUB_OUTPUT
         fi
 
     - name: Exit if no new release
@@ -92,6 +92,35 @@ jobs:
           # Push the image to ACR
           echo "Pushing image to ACR: $acr_image"
           docker push $acr_image
+        done
+
+    - name: Clean up old images in Alibaba Cloud ACR
+      run: |
+        # 安装阿里云 CLI
+        curl -Lo aliyun-cli.tgz https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz
+        tar -xzf aliyun-cli.tgz
+        sudo mv aliyun /usr/local/bin/
+
+        # 配置阿里云 CLI
+        aliyun configure set --access-key-id "${{ secrets.ALIYUN_ACCESS_KEY_ID }}" --access-key-secret "${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}" --region "${{ secrets.ACR_REGION }}" --language zh
+
+        # 设置要清理的仓库名称和命名空间
+        namespace="kenwood-ai"
+        repository="your-repository-name"  # 请替换为您的仓库名称
+
+        # 获取镜像列表并按推送时间排序，保留最新的 N 个镜像
+        keep_latest=5  # 保留最新的 5 个镜像
+        image_tags=$(aliyun acr DescribeImageTags --RegionId "${{ secrets.ACR_REGION }}" --RepoName "$repository" --RepoNamespace "$namespace" --PageSize 100 | jq -r '.ImageTags[] | .Tag' | sort -r)
+
+        count=0
+        for tag in $image_tags; do
+          count=$((count+1))
+          if [ $count -le $keep_latest ]; then
+            echo "Keeping image: $tag"
+          else
+            echo "Deleting image: $tag"
+            aliyun acr DeleteImage --RegionId "${{ secrets.ACR_REGION }}" --RepoName "$repository" --RepoNamespace "$namespace" --Tag "$tag"
+          fi
         done
 
     - name: Update last processed release tag
