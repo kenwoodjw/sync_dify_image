@@ -1,24 +1,65 @@
 name: Sync Docker Images to Alibaba Cloud from Docker Compose
 
 on:
-  push:
-    branches:
-      - main
+  schedule:
+    - cron: '0 * * * *'  # 每小时运行一次
 
 jobs:
   sync-images:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Checkout this repository
+      uses: actions/checkout@v3
+
+    - name: Get latest release tag of Dify
+      id: get_latest_release
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const latestRelease = await github.rest.repos.getLatestRelease({
+            owner: 'langgenius',
+            repo: 'dify'
+          });
+          core.setOutput('tag_name', latestRelease.data.tag_name);
+          console.log(`Latest release tag: ${latestRelease.data.tag_name}`);
+
+    - name: Check if new release is available
+      id: check_release
+      run: |
+        echo "Latest release tag is: ${{ steps.get_latest_release.outputs.tag_name }}"
+
+        if [ -f ".last_release_tag" ]; then
+          last_tag=$(cat .last_release_tag)
+          echo "Last processed tag is: $last_tag"
+        else
+          echo "No previous tag found."
+          last_tag=""
+        fi
+
+        if [ "$last_tag" != "${{ steps.get_latest_release.outputs.tag_name }}" ]; then
+          echo "New release detected."
+          echo "##[set-output name=new_release;]true"
+        else
+          echo "No new release."
+          echo "##[set-output name=new_release;]false"
+        fi
+
+    - name: Exit if no new release
+      if: steps.check_release.outputs.new_release == 'false'
+      run: |
+        echo "No new release to process. Exiting."
+        exit 0
+
     - name: Checkout code from Dify repo
       uses: actions/checkout@v3
       with:
-        repository: langgenius/dify  # 拉取 langgenius/dify 仓库
-        path: dify-repo  # 将该 repo 克隆到 dify-repo 目录中
+        repository: langgenius/dify
+        path: dify-repo
 
     - name: Install yq
       run: |
-        sudo wget https://github.com/mikefarah/yq/releases/download/v4.27.3/yq_linux_amd64 -O /usr/bin/yq
+        sudo wget https://github.com/mikefarah/yq/releases/download/v4.34.1/yq_linux_amd64 -O /usr/bin/yq
         sudo chmod +x /usr/bin/yq
 
     - name: Parse docker-compose.yaml for images
@@ -26,7 +67,7 @@ jobs:
       run: |
         images=$(yq e '.services[].image' dify-repo/docker/docker-compose.yaml | tr '\n' ' ')
         echo "Images: $images"
-        echo "::set-output name=images::$images"
+        echo "images=$images" >> $GITHUB_OUTPUT
 
     - name: Log in to Alibaba Cloud ACR
       run: echo "${{ secrets.ACR_PASSWORD }}" | docker login ${{ secrets.ACR_REGISTRY }} --username ${{ secrets.ACR_USERNAME }} --password-stdin
@@ -36,22 +77,34 @@ jobs:
         images="${{ steps.parse_docker_compose.outputs.images }}"
         for image in $images; do
           echo "Processing image: $image"
-          
+
           # Pull the image from DockerHub
           docker pull $image
-          
+
           # Extract image tag (last part)
           image_tag=$(echo $image | awk -F'/' '{print $NF}')
-          
+
           # Tag the image for ACR
           acr_image="${{ secrets.ACR_REGISTRY }}/kenwood-ai/$image_tag"
           echo "Tagging image: $acr_image"
           docker tag $image $acr_image
 
-          docker rmi $image
-          
           # Push the image to ACR
           echo "Pushing image to ACR: $acr_image"
           docker push $acr_image
-          docker rmi $acr_image
         done
+
+    - name: Update last processed release tag
+      run: echo "${{ steps.get_latest_release.outputs.tag_name }}" > .last_release_tag
+
+    - name: Commit updated tag
+      uses: EndBug/add-and-commit@v9
+      with:
+        add: '.last_release_tag'
+        message: 'Update last processed release tag to ${{ steps.get_latest_release.outputs.tag_name }}'
+        author_name: 'GitHub Actions'
+        author_email: 'actions@github.com'
+        committer_name: 'GitHub Actions'
+        committer_email: 'actions@github.com'
+        branch: main
+        push: true
