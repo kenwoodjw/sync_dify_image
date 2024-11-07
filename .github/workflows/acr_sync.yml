@@ -24,7 +24,7 @@ jobs:
     - name: Parse docker-compose.yaml for images
       id: parse_docker_compose
       run: |
-        images=$(yq e '.services[].image' dify-repo/docker/docker-compose.yaml | tr '\n' ' ')
+        images=$(yq e '.services[].image // ""' dify-repo/docker/docker-compose.yaml | grep -v '^$' | tr '\n' ' ')
         echo "Images: $images"
         echo "::set-output name=images::$images"
 
