@@ -19,7 +19,7 @@ jobs:
     - name: Read version from dify-version.txt
       id: read_version
       run: |
-        version=$(cat dify-repo/dify-version.txt)
+        version=$(cat dify-version.txt)
         echo "Dify version: $version"
         echo "::set-output name=version::$version"
 
