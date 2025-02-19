@@ -10,11 +10,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout current repository
+    - name: Checkout code from current repository
       uses: actions/checkout@v3
       with:
         # This automatically checks out the current repository (where the workflow is running)
         path: current-repo  # Optional, specify a path if you want to check out into a subdirectory (default is the root)
+
+    - name: List files in the current repository
+      run: |
+        echo "Listing files in the current repository"
+        ls -alh  # This lists all files in the current directory, including hidden files
 
     - name: Read version from dify-version.txt in current repository
       id: read_version
