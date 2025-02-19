@@ -10,23 +10,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Checkout current repository
+      uses: actions/checkout@v3
+      with:
+        # This automatically checks out the current repository (where the workflow is running)
+        path: current-repo  # Optional, specify a path if you want to check out into a subdirectory (default is the root)
+
+    - name: Read version from dify-version.txt in current repository
+      id: read_version
+      run: |
+        # Read version from dify-version.txt in the current repository
+        version=$(cat dify-version.txt)  # Adjust path if file is in a subdirectory
+        echo "Dify version: $version"
+        echo "::set-output name=version::$version"
+
     - name: Checkout code from Dify repo
       uses: actions/checkout@v3
       with:
-        repository: langgenius/dify  # 拉取 langgenius/dify 仓库
-        path: dify-repo  # 将该 repo 克隆到 dify-repo 目录中
-
-    - name: Read version from dify-version.txt
-      id: read_version
-      run: |
-        version=$(cat ../../dify-version.txt)
-        echo "Dify version: $version"
-        echo "::set-output name=version::$version"
+        repository: langgenius/dify  # Pull langgenius/dify repository
+        path: dify-repo  # Check out the Dify repo into the dify-repo directory
 
     - name: Checkout specific tag from Dify repo
       run: |
         version="${{ steps.read_version.outputs.version }}"
         echo "Checking out version tag: $version"
+        cd dify-repo
         git fetch --tags
         git checkout "tags/$version"
 
