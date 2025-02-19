@@ -19,13 +19,13 @@ jobs:
     - name: List files in the current repository
       run: |
         echo "Listing files in the current repository"
-        ls -alh  # This lists all files in the current directory, including hidden files
+        ls -alh current-repo # This lists all files in the current directory, including hidden files
 
     - name: Read version from dify-version.txt in current repository
       id: read_version
       run: |
         # Read version from dify-version.txt in the current repository
-        version=$(cat dify-version.txt)  # Adjust path if file is in a subdirectory
+        version=$(cat current-repo/dify-version.txt)  # Adjust path if file is in a subdirectory
         echo "Dify version: $version"
         echo "::set-output name=version::$version"
 
