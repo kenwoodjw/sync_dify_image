@@ -16,6 +16,20 @@ jobs:
         repository: langgenius/dify  # 拉取 langgenius/dify 仓库
         path: dify-repo  # 将该 repo 克隆到 dify-repo 目录中
 
+    - name: Read version from dify-version.txt
+      id: read_version
+      run: |
+        version=$(cat dify-repo/dify-version.txt)
+        echo "Dify version: $version"
+        echo "::set-output name=version::$version"
+
+    - name: Checkout specific tag from Dify repo
+      run: |
+        version="${{ steps.read_version.outputs.version }}"
+        echo "Checking out version tag: $version"
+        git fetch --tags
+        git checkout "tags/$version"
+
     - name: Install yq
       run: |
         sudo wget https://github.com/mikefarah/yq/releases/download/v4.27.3/yq_linux_amd64 -O /usr/bin/yq
