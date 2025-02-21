@@ -13,6 +13,7 @@
 - `ACR_USERNAME`: 阿里云 ACR 用户名
 - `ACR_PASSWORD`: 阿里云 ACR 密码
 - `ACR_REGISTRY`: 阿里云 ACR 注册表地址（例如：`your-registry-id.cn-hangzhou.aliyuncs.com`）
+- `ACR_REPO`: 阿里云ACR仓库名称
 
 ## 工作流
 
