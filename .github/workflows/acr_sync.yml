@@ -60,9 +60,9 @@ jobs:
       run: echo "${{ secrets.ACR_PASSWORD }}" | docker login ${{ secrets.ACR_REGISTRY }} --username ${{ secrets.ACR_USERNAME }} --password-stdin
 
     - name: Set up skopeo
-      uses: warjiang/setup-skopeo@latest
-      with:
-        version: latest
+      uses: wwarjiang/setup-skopeo@v0.1.3
+      # with:
+      #   version: latest
 
     - name: Sync images using skopeo
       run: |
