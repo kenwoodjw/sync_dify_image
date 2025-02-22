@@ -1,139 +1,84 @@
-name: Sync Docker Images to Alibaba Cloud from Docker Compose and Clean Old Images
+name: Sync Docker Images to Alibaba Cloud from Docker Compose
 
 on:
-  schedule:
-    - cron: '0 * * * *'  # 每小时运行一次
+  push:
+    branches:
+      - main
+      - dev
 
 jobs:
   sync-images:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout this repository
+    - name: Checkout code from current repository
       uses: actions/checkout@v3
-
-    - name: Get latest release tag of Dify
-      id: get_latest_release
-      uses: actions/github-script@v6
       with:
-        script: |
-          const latestRelease = await github.rest.repos.getLatestRelease({
-            owner: 'langgenius',
-            repo: 'dify'
-          });
-          core.setOutput('tag_name', latestRelease.data.tag_name);
-          console.log(`Latest release tag: ${latestRelease.data.tag_name}`);
+        # This automatically checks out the current repository (where the workflow is running)
+        path: current-repo  # Optional, specify a path if you want to check out into a subdirectory (default is the root)
 
-    - name: Check if new release is available
-      id: check_release
+    - name: List files in the current repository
       run: |
-        echo "Latest release tag is: ${{ steps.get_latest_release.outputs.tag_name }}"
+        echo "Listing files in the current repository"
+        ls -alh current-repo # This lists all files in the current directory, including hidden files
 
-        if [ -f ".last_release_tag" ]; then
-          last_tag=$(cat .last_release_tag)
-          echo "Last processed tag is: $last_tag"
-        else
-          echo "No previous tag found."
-          last_tag=""
-        fi
-
-        if [ "$last_tag" != "${{ steps.get_latest_release.outputs.tag_name }}" ]; then
-          echo "New release detected."
-          echo "new_release=true" >> $GITHUB_OUTPUT
-        else
-          echo "No new release."
-          echo "new_release=false" >> $GITHUB_OUTPUT
-        fi
-
-    - name: Exit if no new release
-      if: steps.check_release.outputs.new_release == 'false'
+    - name: Read version from dify-version.txt in current repository
+      id: read_version
       run: |
-        echo "No new release to process. Exiting."
-        exit 0
+        # Read version from dify-version.txt in the current repository
+        version=$(cat current-repo/dify-version.txt)  # Adjust path if file is in a subdirectory
+        echo "Dify version: $version"
+        echo "::set-output name=version::$version"
 
     - name: Checkout code from Dify repo
       uses: actions/checkout@v3
       with:
-        repository: langgenius/dify
-        path: dify-repo
+        repository: langgenius/dify  # Pull langgenius/dify repository
+        path: dify-repo  # Check out the Dify repo into the dify-repo directory
+
+    - name: Checkout specific tag from Dify repo
+      run: |
+        version="${{ steps.read_version.outputs.version }}"
+        echo "Checking out version tag: $version"
+        cd dify-repo
+        git fetch --tags
+        git checkout "tags/$version"
 
     - name: Install yq
       run: |
-        sudo wget https://github.com/mikefarah/yq/releases/download/v4.34.1/yq_linux_amd64 -O /usr/bin/yq
+        sudo wget https://github.com/mikefarah/yq/releases/download/v4.27.3/yq_linux_amd64 -O /usr/bin/yq
         sudo chmod +x /usr/bin/yq
 
     - name: Parse docker-compose.yaml for images
       id: parse_docker_compose
       run: |
-        images=$(yq e '.services[].image' dify-repo/docker/docker-compose.yaml | tr '\n' ' ')
+        images=$(yq e '.services[].image // ""' dify-repo/docker/docker-compose.yaml | grep -v '^$' | tr '\n' ' ')
         echo "Images: $images"
-        echo "images=$images" >> $GITHUB_OUTPUT
+        echo "::set-output name=images::$images"
 
     - name: Log in to Alibaba Cloud ACR
       run: echo "${{ secrets.ACR_PASSWORD }}" | docker login ${{ secrets.ACR_REGISTRY }} --username ${{ secrets.ACR_USERNAME }} --password-stdin
 
-    - name: Pull and push images to Alibaba Cloud ACR
+    - name: Set up skopeo
+      uses: warjiang/setup-skopeo@latest
+      with:
+        version: latest
+
+    - name: Sync images using skopeo
       run: |
         images="${{ steps.parse_docker_compose.outputs.images }}"
         for image in $images; do
-          echo "Processing image: $image"
-
-          # Pull the image from DockerHub
-          docker pull $image
-
-          # Extract image tag (last part)
+          echo "Syncing image: $image"
+          
+          # Extract image tag (last part of the image name)
           image_tag=$(echo $image | awk -F'/' '{print $NF}')
-
-          # Tag the image for ACR
-          acr_image="${{ secrets.ACR_REGISTRY }}/kenwood-ai/$image_tag"
-          echo "Tagging image: $acr_image"
-          docker tag $image $acr_image
-
-          # Push the image to ACR
-          echo "Pushing image to ACR: $acr_image"
-          docker push $acr_image
+          
+          # Construct destination image
+          acr_image="${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_REPO }}/$image_tag"
+          echo "Syncing image to: $acr_image"
+          
+          # Use skopeo to copy the image directly
+          skopeo copy --dest-creds ${{ secrets.ACR_USERNAME }}:${{ secrets.ACR_PASSWORD }} \
+            docker://$image \
+            docker://$acr_image
         done
-
-    - name: Clean up old images in Alibaba Cloud ACR
-      run: |
-        # 安装阿里云 CLI
-        curl -Lo aliyun-cli.tgz https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz
-        tar -xzf aliyun-cli.tgz
-        sudo mv aliyun /usr/local/bin/
-
-        # 配置阿里云 CLI
-        aliyun configure set --access-key-id "${{ secrets.ALIYUN_ACCESS_KEY_ID }}" --access-key-secret "${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}" --region "${{ secrets.ACR_REGION }}" --language zh
-
-        # 设置要清理的仓库名称和命名空间
-        namespace="kenwood-ai"
-        repository="your-repository-name"  # 请替换为您的仓库名称
-
-        # 获取镜像列表并按推送时间排序，保留最新的 N 个镜像
-        keep_latest=5  # 保留最新的 5 个镜像
-        image_tags=$(aliyun acr DescribeImageTags --RegionId "${{ secrets.ACR_REGION }}" --RepoName "$repository" --RepoNamespace "$namespace" --PageSize 100 | jq -r '.ImageTags[] | .Tag' | sort -r)
-
-        count=0
-        for tag in $image_tags; do
-          count=$((count+1))
-          if [ $count -le $keep_latest ]; then
-            echo "Keeping image: $tag"
-          else
-            echo "Deleting image: $tag"
-            aliyun acr DeleteImage --RegionId "${{ secrets.ACR_REGION }}" --RepoName "$repository" --RepoNamespace "$namespace" --Tag "$tag"
-          fi
-        done
-
-    - name: Update last processed release tag
-      run: echo "${{ steps.get_latest_release.outputs.tag_name }}" > .last_release_tag
-
-    - name: Commit updated tag
-      uses: EndBug/add-and-commit@v9
-      with:
-        add: '.last_release_tag'
-        message: 'Update last processed release tag to ${{ steps.get_latest_release.outputs.tag_name }}'
-        author_name: 'GitHub Actions'
-        author_email: 'actions@github.com'
-        committer_name: 'GitHub Actions'
-        committer_email: 'actions@github.com'
-        branch: main
-        push: true
