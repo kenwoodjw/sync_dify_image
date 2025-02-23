@@ -13,6 +13,7 @@
 - `ACR_USERNAME`: 阿里云 ACR 用户名
 - `ACR_PASSWORD`: 阿里云 ACR 密码
 - `ACR_REGISTRY`: 阿里云 ACR 注册表地址（例如：`your-registry-id.cn-hangzhou.aliyuncs.com`）
+- `ACR_REPO`: 阿里云ACR仓库名称
 
 ## 工作流
 
@@ -24,8 +25,7 @@ GitHub Actions 工作流定义文件位于 `.github/workflows/sync-images.yml`�
 4. **拉取、标记和推送镜像**：拉取 Docker Hub 上的镜像，标记并推送到阿里云 ACR。
 
 ## 使用
-
-每当你将代码推送到 `main` 分支时，GitHub Actions 将自动执行上述工作流，确保镜像在 Docker Hub 和阿里云 ACR 之间保持同步。
+修改dify-version.txt,当你将代码推送到 `main` 分支时，GitHub Actions 将自动执行上述工作流，确保镜像在 Docker Hub 和阿里云 ACR 之间保持同步。
 
 
 | 源镜像                                          | 替换后镜像                                                     |
@@ -52,4 +52,3 @@ GitHub Actions 工作流定义文件位于 `.github/workflows/sync-images.yml`�
 | myscale/myscaledb:1.6.4                         | registry.cn-hangzhou.aliyuncs.com/kenwood-ai/myscaledb:1.6.4 |
 | docker.elastic.co/elasticsearch/elasticsearch:8.14.3 | registry.cn-hangzhou.aliyuncs.com/kenwood-ai/elasticsearch:8.14.3 |
 | docker.elastic.co/kibana/kibana:8.14.3          | registry.cn-hangzhou.aliyuncs.com/kenwood-ai/kibana:8.14.3 |
-| downloads.unstructured.io/unstructured-io/unstructured-api:latest | registry.cn-hangzhou.aliyuncs.com/kenwood-ai/unstructured-api:latest |
