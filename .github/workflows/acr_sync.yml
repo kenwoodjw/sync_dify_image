@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - dev
 
 jobs:
   sync-images:
@@ -58,27 +59,26 @@ jobs:
     - name: Log in to Alibaba Cloud ACR
       run: echo "${{ secrets.ACR_PASSWORD }}" | docker login ${{ secrets.ACR_REGISTRY }} --username ${{ secrets.ACR_USERNAME }} --password-stdin
 
-    - name: Pull and push images to Alibaba Cloud ACR
+    - name: Set up skopeo
+      uses: warjiang/setup-skopeo@v0.1.3
+      # with:
+      #   version: latest
+
+    - name: Sync images using skopeo
       run: |
         images="${{ steps.parse_docker_compose.outputs.images }}"
         for image in $images; do
-          echo "Processing image: $image"
+          echo "Syncing image: $image"
           
-          # Pull the image from DockerHub
-          docker pull $image
-          
-          # Extract image tag (last part)
+          # Extract image tag (last part of the image name)
           image_tag=$(echo $image | awk -F'/' '{print $NF}')
           
-          # Tag the image for ACR
-          acr_image="${{ secrets.ACR_REGISTRY }}/${{secrets.ACR_REPO}}/$image_tag"
-          echo "Tagging image: $acr_image"
-          docker tag $image $acr_image
-
-          docker rmi $image
+          # Construct destination image
+          acr_image="${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_REPO }}/$image_tag"
+          echo "Syncing image to: $acr_image"
           
-          # Push the image to ACR
-          echo "Pushing image to ACR: $acr_image"
-          docker push $acr_image
-          docker rmi $acr_image
+          # Use skopeo to copy the image directly
+          skopeo copy --dest-creds ${{ secrets.ACR_USERNAME }}:${{ secrets.ACR_PASSWORD }} \
+            docker://$image \
+            docker://$acr_image
         done
