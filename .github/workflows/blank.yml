@@ -53,6 +53,7 @@ jobs:
       id: parse_docker_compose
       run: |
         images=$(yq e '.services[].image // ""' dify-repo/docker/docker-compose.yaml | grep -v '^$' | tr '\n' ' ')
+        images="$images langgenius/dify-plugin-daemon:0.0.2-local"
         echo "Images: $images"
         echo "::set-output name=images::$images"
 
