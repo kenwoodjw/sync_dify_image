@@ -24,7 +24,7 @@ GitHub Actions 工作流定义文件位于 `.github/workflows/sync-images.yml`�
 3. **登录到阿里云 ACR**：使用配置的 GitHub Secrets 登录到阿里云 ACR。
 4. **拉取、标记和推送镜像**：拉取 Docker Hub 上的镜像，标记并推送到阿里云 ACR。
 
-## 使用
+## 使用 test
 修改dify-version.txt,当你将代码推送到 `main` 分支时，GitHub Actions 将自动执行上述工作流，确保镜像在 Docker Hub 和阿里云 ACR 之间保持同步。
 
 以下是0.8.2的例子，可以根据dify-version.txt替换tag
